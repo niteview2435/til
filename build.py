@@ -32,8 +32,10 @@ LM_ROMAN_CSS = f"{LM_BASE}/latinmodern-roman.css"
 LM_SANS_CSS = f"{LM_BASE}/latinmodern-sans.css"
 
 
-# --- tiny markdown -----------------------------------------------------------
-# Just enough for prose proofs: paragraphs, unordered lists, bold/italic/code.
+# --- markdown ----------------------------------------------------------------
+# A small-but-real Markdown subset, enough to faithfully render pasted AI
+# explanations: headings (###/####), paragraphs, unordered & ordered lists,
+# blockquotes, GFM pipe tables, fenced code blocks, and bold/italic/code.
 # Math spans are protected beforehand so markdown never mangles them.
 
 MATH_RE = re.compile(r"(\$\$.+?\$\$|\$[^$\n]+?\$)", re.S)
@@ -82,217 +84,292 @@ def wrap_jp(s):
     return JP_RE.sub(r'<span class="jp">\g<0></span>', s)
 
 
-def md_to_html(text):
-    text, store = protect_math(text)
-    # Escape prose <, >, & now (math is already out as placeholders) so body
-    # text and inline code can contain them safely; math is escaped on restore.
-    text = html.escape(text, quote=False)
+RULE_RE = re.compile(r"^\s*([-*_])\1{2,}\s*$")
+HEADING_RE = re.compile(r"^\s*(#{3,6})\s+(.*)$")
+FENCE_RE = re.compile(r"^\s*```(.*)$")
+FENCE_END_RE = re.compile(r"^\s*```\s*$")
+QUOTE_RE = re.compile(r"^\s*>\s?")
+UL_RE = re.compile(r"^\s*[-*]\s+(.*)$")
+OL_RE = re.compile(r"^\s*\d+\.\s+(.*)$")
+BLOCK_START_RE = re.compile(r"^\s*(#{1,6}\s|>|```|\d+\.\s|[-*]\s)")
+# A GFM table separator row: cells of dashes with optional alignment colons.
+TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
+
+
+def _cells(row):
+    """Split one pipe-table row into trimmed cells (ignoring the outer pipes)."""
+    return [c.strip() for c in row.strip().strip("|").split("|")]
+
+
+def render_blocks(lines):
+    """Render already math-protected, html-escaped lines into block HTML.
+
+    Shared by md_to_html and by blockquotes (which re-render their inner lines),
+    so math placeholders are restored once by the caller, not here.
+    """
     out = []
     para = []
-    items = None
+    i, n = 0, len(lines)
 
     def flush_para():
         if para:
             out.append("<p>" + inline(" ".join(para).strip()) + "</p>")
             para.clear()
 
-    def flush_list():
-        nonlocal items
-        if items is not None:
-            out.append("<ul>" + "".join(f"<li>{x}</li>" for x in items) + "</ul>")
-            items = None
+    while i < n:
+        line = lines[i].rstrip()
 
-    for line in text.split("\n"):
-        line = line.rstrip()
-        if re.match(r"^\s*([-*_])\1{2,}\s*$", line):
-            # A rule line (---, ***, ___) just ends the current block; no <hr>
-            # is drawn. Lets stray separators in pasted drafts stay harmless.
+        # Fenced code — raw, no inline formatting applied inside.
+        m = FENCE_RE.match(line)
+        if m:
             flush_para()
-            flush_list()
-        elif re.match(r"^\s*-\s+", line):
+            i += 1
+            code = []
+            while i < n and not FENCE_END_RE.match(lines[i]):
+                code.append(lines[i])
+                i += 1
+            i += 1  # skip the closing fence
+            out.append("<pre><code>" + "\n".join(code) + "</code></pre>")
+            continue
+
+        # Sub-headings within a block (### and deeper; # / ## are structural).
+        m = HEADING_RE.match(line)
+        if m:
             flush_para()
-            if items is None:
-                items = []
-            items.append(inline(re.sub(r"^\s*-\s+", "", line)))
-        elif line.strip() == "":
+            level = len(m.group(1))
+            out.append(f"<h{level}>{inline(m.group(2).strip())}</h{level}>")
+            i += 1
+            continue
+
+        # GFM pipe table: a header row immediately followed by a separator row.
+        if "|" in line and i + 1 < n and "|" in lines[i + 1] \
+                and TABLE_SEP_RE.match(lines[i + 1]):
             flush_para()
-            flush_list()
-        elif items is not None:
-            # Lazy continuation: a non-blank line under an open list extends the
-            # current item (proofs often run a bullet across several lines).
-            items[-1] += " " + inline(line.strip())
-        else:
-            para.append(line.strip())
+            head = _cells(line)
+            i += 2
+            body = []
+            while i < n and "|" in lines[i] and lines[i].strip():
+                body.append(_cells(lines[i]))
+                i += 1
+            thead = "".join(f"<th>{inline(c)}</th>" for c in head)
+            rows = "".join(
+                "<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r) + "</tr>"
+                for r in body
+            )
+            out.append(
+                f"<table><thead><tr>{thead}</tr></thead><tbody>{rows}</tbody></table>"
+            )
+            continue
+
+        # Blockquote: strip the markers and re-render the inner lines.
+        if QUOTE_RE.match(line):
+            flush_para()
+            inner = []
+            while i < n and QUOTE_RE.match(lines[i]):
+                inner.append(QUOTE_RE.sub("", lines[i], count=1))
+                i += 1
+            out.append("<blockquote>" + render_blocks(inner) + "</blockquote>")
+            continue
+
+        # Rule line: just a block separator, no <hr> (keeps stray --- harmless).
+        if RULE_RE.match(line):
+            flush_para()
+            i += 1
+            continue
+
+        # Unordered / ordered lists, with lazy continuation of the last item.
+        m = UL_RE.match(line) or OL_RE.match(line)
+        if m:
+            ordered = OL_RE.match(line) is not None
+            item_re = OL_RE if ordered else UL_RE
+            items = []
+            while i < n:
+                lm = item_re.match(lines[i])
+                if lm:
+                    items.append(inline(lm.group(1).strip()))
+                    i += 1
+                elif lines[i].strip() == "" or BLOCK_START_RE.match(lines[i]):
+                    break
+                else:
+                    items[-1] += " " + inline(lines[i].strip())
+                    i += 1
+            tag = "ol" if ordered else "ul"
+            out.append(f"<{tag}>" + "".join(f"<li>{x}</li>" for x in items) + f"</{tag}>")
+            continue
+
+        if line.strip() == "":
+            flush_para()
+            i += 1
+            continue
+
+        para.append(line.strip())
+        i += 1
+
     flush_para()
-    flush_list()
-    return restore_math(wrap_jp("\n".join(out)), store)
+    return "\n".join(out)
+
+
+def md_to_html(text):
+    text, store = protect_math(text)
+    # Escape prose <, >, & now (math is already out as placeholders) so body
+    # text and inline code can contain them safely; math is escaped on restore.
+    text = html.escape(text, quote=False)
+    return restore_math(wrap_jp(render_blocks(text.split("\n"))), store)
+
+
+def render_inline(text):
+    """Inline-only render (for heading/record labels): math + bold/italic/code,
+    with JP tinting — but no block structure."""
+    text, store = protect_math(text)
+    text = html.escape(text, quote=False)
+    return restore_math(wrap_jp(inline(text)), store)
 
 
 # --- source parsing ----------------------------------------------------------
+# A day file holds one or more *records* (記録), separated by a single-`#`
+# heading — each record is one pasted/curated explanation. Within a record,
+# `##` headings slice the prose into fade-in *blocks*. `###`+ are ordinary
+# sub-headings inside a block (handled by the markdown engine). The `#`/`##`
+# text (if any) becomes the record title / block heading.
 
-# Section headings recognised in a day file, in rough document order of use.
-# Any sequence of these may appear; same-kind repeats are auto-numbered.
-SECTION_KINDS = ("定義", "公理", "補題", "命題", "定理", "証明", "例", "系", "注意")
-# A heading is `# <kind>`, optionally followed by a one-line caption on the same
-# line (`# 命題 相対位相の閉集合の特徴づけ`). The caption is shown only on theme
-# pages (next to the label); day pages ignore it. A kind must be followed by
-# whitespace or end-of-line, so `# 命題の一般化` stays a non-heading as before.
-SECTION_RE = re.compile(
-    r"(?m)^#\s+(" + "|".join(SECTION_KINDS) + r")(?:[ \t　]+(\S.*?))?[ \t　]*$"
-)
+# `#` not followed by another `#`; `##` not followed by a third.
+RECORD_RE = re.compile(r"^#(?!#)[ \t　]*(.*?)[ \t　]*$")
+BLOCK_RE = re.compile(r"^##(?!#)[ \t　]*(.*?)[ \t　]*$")
 
 
-def parse(text):
-    """Return a list of (kind, caption, content) sections in document order.
+def parse_records(text):
+    """Return a list of records in document order.
 
-    A day file may hold any sequence of the recognised `# <kind>` headings
-    (see SECTION_KINDS) — e.g. 定義 / 命題 / 証明 / 例, each with an optional
-    caption on the heading line. Empty sections (a heading with no body) are
-    dropped. Repeats of the same kind are numbered later at render time.
+    Each record is `(title, blocks)` where `blocks` is a list of
+    `(heading, content)` in document order. A record opens on a `#` line (its
+    title may be empty); content/`##` blocks before the first `#` form an
+    implicit leading record. A block's leading, heading-less content is kept as
+    a block with an empty heading. Empty blocks (and records with no non-empty
+    block) are dropped. Anything before the first heading (e.g. a `tags:` line)
+    is ignored here — see parse_tags.
     """
-    body = text.strip()
-    parts = SECTION_RE.split(body)
-    rest = iter(parts[1:])  # (kind, caption, content) triples
+    records = []
+    cur = None  # [title, [ [heading, [lines]], ... ]]
 
-    sections = []
-    for kind, caption, content in zip(rest, rest, rest):
-        content = content.strip()
-        if content:
-            sections.append((kind, (caption or "").strip(), content))
-    return sections
+    for raw in text.strip().split("\n"):
+        rm = RECORD_RE.match(raw)
+        bm = BLOCK_RE.match(raw)
+        if rm is not None:
+            cur = [rm.group(1).strip(), []]
+            records.append(cur)
+        elif bm is not None:
+            if cur is None:
+                cur = ["", []]
+                records.append(cur)
+            cur[1].append([bm.group(1).strip(), []])
+        else:
+            if cur is None:
+                continue  # preamble before the first heading (tags, blanks)
+            if not cur[1]:
+                cur[1].append(["", []])  # leading heading-less block
+            cur[1][-1][1].append(raw)
+
+    finished = []
+    for title, blocks in records:
+        kept = []
+        for heading, lines in blocks:
+            content = "\n".join(lines).strip()
+            if content:
+                kept.append((heading, content))
+        if kept:
+            finished.append((title, kept))
+    return finished
 
 
 def parse_tags(text):
-    """Read a leading `tags:` line (before the first section) into a list."""
+    """Read a leading `tags:` line (before the first heading) into a list."""
     for line in text.strip().splitlines():
         line = line.strip()
         if line.startswith("#"):
-            break  # reached a section heading; no tags line above it
+            break  # reached a record / block heading; no tags line above it
         if line.startswith("tags:"):
             raw = line[len("tags:"):]
             return [t for t in re.split(r"[,、\s]+", raw.strip()) if t]
     return []
 
 
-def render_sections(sections, eyebrow_html="", with_divider=True, show_captions=False):
-    """Build the stacked <section>s for a group of sections.
+def _section(cls, inner):
+    return f'<section class="{cls}">\n      {inner}\n    </section>'
 
-    Each (kind, content) section becomes one fade-in block. A kind that occurs
-    more than once in the group is numbered (`命題 1`, `命題 2`, …); a lone kind
-    is left unnumbered. 証明 blocks get a trailing ∎. `eyebrow_html` (a date, or
-    a link back to the source day) is placed above the first block; the divider
-    rides in the last block when `with_divider` is set.
 
-    Tags are intentionally not rendered — they live in index.json only, for
-    sorting/filtering later.
+def _block_inner(heading, content):
+    label = f'<h3 class="label">{render_inline(heading)}</h3>\n      ' if heading else ""
+    return f'{label}<div class="body">{md_to_html(content)}</div>'
+
+
+def render_records(records, eyebrow_html="", with_divider=True):
+    """Build the stacked fade-in <section>s for a day's records.
+
+    Every record is introduced by a `記録` label (numbered `記録 N` when the day
+    holds more than one), carrying its title as a small caption beside it. Each
+    `##` block then becomes one `.block` section. `eyebrow_html` (the date) rides
+    above the first section; the divider rides in the last when set.
+
+    Tags are intentionally not rendered — they live in index.json only.
     """
-    totals = {}
-    for kind, _, _ in sections:
-        totals[kind] = totals.get(kind, 0) + 1
+    multi = len(records) > 1
+    items = []  # (css class, inner html)
+    for ri, (title, blocks) in enumerate(records, 1):
+        num = f" {ri}" if multi else ""
+        cap = f'<span class="caption">{render_inline(title)}</span>' if title else ""
+        items.append(("record reveal", f'<h2 class="record-label">記録{num}{cap}</h2>'))
+        for heading, content in blocks:
+            items.append(("block reveal", _block_inner(heading, content)))
 
-    out = []
-    first = [True]
-    seen = {}
-
-    def eyebrow():
-        if not first[0]:
-            return ""
-        first[0] = False
-        if not eyebrow_html:
-            return ""
-        return f'<p class="eyebrow">{eyebrow_html}</p>\n      '
-
-    for kind, caption, content in sections:
-        if totals[kind] > 1:
-            seen[kind] = seen.get(kind, 0) + 1
-            label = f"{kind} {seen[kind]}"
-        else:
-            label = kind
-        # The heading's caption (a one-line gloss of what the item is) rides next
-        # to the label — shown only on theme pages, hidden on day pages.
-        if show_captions and caption:
-            label += f'<span class="caption">{html.escape(caption, quote=False)}</span>'
-        # ∎ as LaTeX (\blacksquare) so MathJax typesets it in the same font as
-        # the rest of the math, not a raw Unicode glyph from the body font.
-        qed = '\n      <p class="qed">$\\blacksquare$</p>' if kind == "証明" else ""
-        out.append(
-            '<section class="block reveal">\n'
-            f"      {eyebrow()}<h2 class=\"label\">{label}</h2>\n"
-            f'      <div class="body">{md_to_html(content)}</div>'
-            f"{qed}\n"
-            "    </section>"
-        )
-
-    # The divider rides along in the last block so it fades in together with
-    # the final proof; the calendar reveals separately below it.
-    if out and with_divider:
-        idx = out[-1].rindex("</section>")
-        out[-1] = (
-            out[-1][:idx]
-            + '  <hr class="divider" aria-hidden="true" />\n    </section>'
-        )
-    return "\n\n    ".join(out)
+    if not items:
+        return ""
+    if eyebrow_html:
+        cls, inner = items[0]
+        items[0] = (cls, f'<p class="eyebrow">{eyebrow_html}</p>\n      {inner}')
+    if with_divider:
+        cls, inner = items[-1]
+        items[-1] = (cls, f'{inner}\n      <hr class="divider" aria-hidden="true" />')
+    return "\n\n    ".join(_section(c, inner) for c, inner in items)
 
 
-# A "lead" heading opens a new logical item; a 証明/例/注意 that follows attaches
-# to the item above it. Splitting a day on these boundaries lets one day's file
-# contribute several items to *different* theme articles (命題ごとに分割).
-LEAD_KINDS = ("定義", "公理", "補題", "命題", "定理", "系")
-
-
-def split_clusters(sections):
-    """Group a day's sections into items: each lead heading starts a new item;
-    trailing 証明/例/注意 stay with the item above. Returns a list of section
-    lists, in document order."""
-    clusters = []
-    cur = []
-    for section in sections:
-        kind = section[0]
-        if kind in LEAD_KINDS and cur:
-            clusters.append(cur)
-            cur = []
-        cur.append(section)
-    if cur:
-        clusters.append(cur)
-    return clusters
-
-
-def assign_days_into_themes(d, sections, assign, slugs, theme_items):
-    """Split one day into items and file each under its theme.
+def assign_days_into_themes(d, records, assign, slugs, theme_items):
+    """File each of a day's records under its theme.
 
     `assign[d]` is a single theme name (the whole day) or a list of names, one
-    per item in document order; a single name is broadcast to every item. Each
-    item's own caption travels with its heading (shown on the theme page).
+    per record in document order; a single name is broadcast to every record.
     Unknown theme names or a length mismatch are hard errors; an unassigned day
     is skipped with a warning (its day page is unaffected).
     """
     if d not in assign:
         print(f"  warning: {d} has no theme in theme_map.json — skipped")
         return
-    clusters = split_clusters(sections)
-    if not clusters:
+    if not records:
         return
     names = assign[d]
     if isinstance(names, str):
-        names = [names] * len(clusters)
-    if len(names) != len(clusters):
+        names = [names] * len(records)
+    if len(names) != len(records):
         raise SystemExit(
-            f"{d}: theme_map has {len(names)} theme(s) but the day splits into "
-            f"{len(clusters)} item(s); list one theme per item (or a single one)"
+            f"{d}: theme_map has {len(names)} theme(s) but the day has "
+            f"{len(records)} record(s); list one theme per record (or a single one)"
         )
-    for name, cluster in zip(names, clusters):
+    for name, record in zip(names, records):
         if name not in slugs:
             raise SystemExit(f"{d}: unknown theme '{name}' (add it to themes[])")
-        theme_items[name].append((d, cluster))
+        theme_items[name].append((d, record))
 
 
 def render_theme(items):
-    """Render a theme article: each item is one day's cluster, captioned by its
-    heading gloss. `items` is (date, sections) oldest first — no source-day link
-    and no dividers, just the stacked captioned items."""
+    """Render a theme article: each item is one record, titled by its heading,
+    oldest first — no source-day eyebrow and no dividers, just stacked blocks."""
     parts = []
-    for d, sections in items:
-        parts.append(render_sections(sections, with_divider=False, show_captions=True))
+    for d, (title, blocks) in items:
+        secs = []
+        if title:
+            secs.append(_section("record reveal", f'<h2 class="record-label">{render_inline(title)}</h2>'))
+        for heading, content in blocks:
+            secs.append(_section("block reveal", _block_inner(heading, content)))
+        parts.append("\n\n    ".join(secs))
     return "\n\n    ".join(parts)
 
 
@@ -391,7 +468,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
     fetch('./index.json')
       .then(function (r) { return r.json(); })
       .then(function (list) {
-        if (!list.length) { document.body.textContent = 'まだ証明がありません。'; return; }
+        if (!list.length) { document.body.textContent = 'まだ記録がありません。'; return; }
         var pick = list[Math.floor(Math.random() * list.length)];
         location.replace('./' + pick.date + '.html');
       })
@@ -402,11 +479,13 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
+# A `#` line opens a 記録 (its text is the optional title; multi-record days are
+# auto-numbered 記録 1 / 記録 2 …). `##` lines slice a record into blocks.
 NEW_TEMPLATE = """tags:
 
-# 命題
+#
 
-# 証明
+##
 """
 
 # Injected into day pages only in `--watch` (preview) mode — never by a plain
@@ -444,21 +523,21 @@ def build(live=False):
     theme_map = json.loads(THEME_MAP.read_text(encoding="utf-8"))
     slugs = {t["name"]: t["slug"] for t in theme_map["themes"]}
     assign = theme_map["assign"]
-    # theme name -> list of (date, cluster sections), collected oldest-first
-    # (the glob is ascending) so each article reads as it accumulated.
+    # theme name -> list of (date, record), collected oldest-first (the glob is
+    # ascending) so each article reads as it accumulated.
     theme_items = {t["name"]: [] for t in theme_map["themes"]}
 
     entries = []
     for md in sorted(SRC.glob("*.md")):
         d = md.stem  # YYYY-MM-DD
         text = md.read_text(encoding="utf-8")
-        sections = parse(text)
+        records = parse_records(text)
         tags = parse_tags(text)  # stored in index.json only, not rendered
-        assign_days_into_themes(d, sections, assign, slugs, theme_items)
+        assign_days_into_themes(d, records, assign, slugs, theme_items)
         page = DAY_TEMPLATE.format(
             date=d,
             date_jp=date_jp(d),
-            content=render_sections(sections, eyebrow_html=date_jp(d), show_captions=True),
+            content=render_records(records, eyebrow_html=date_jp(d)),
             mathjax=MATHJAX_CDN,
             lm_roman=LM_ROMAN_CSS,
             lm_sans=LM_SANS_CSS,
@@ -497,7 +576,7 @@ def build(live=False):
     (OUT / "themes.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    print(f"built {len(entries)} proof(s), {len(manifest)} theme(s) into {OUT}/")
+    print(f"built {len(entries)} day(s), {len(manifest)} theme(s) into {OUT}/")
 
 
 def watch(port=8000):

@@ -44,10 +44,29 @@ html, body {
   margin: 0;
 }
 
-/* Caption beside an item's label on theme pages: a gloss of what the 命題 etc.
-   is. The kind stays gothic/bold; the caption sits after a space, in the body
-   serif (Latin Modern Roman / Shippori Mincho) and wrapped in parentheses. */
-.label .caption {
+/* 記録 (record) header — introduces one pasted/curated explanation within a
+   day. Larger & gothic, a step above the block labels below it. On a day page
+   it reads "記録 N (タイトル)"; on a theme page it is just the title. */
+.record {
+  margin: 0 0 44px;
+}
+.record-label {
+  font-family: 'Latin Modern Sans', 'Noto Sans JP', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  margin: 0;
+}
+/* Record + theme pages use the same record block; give later records air. */
+.record + .block,
+.record ~ .record { margin-top: 0; }
+
+/* Caption beside a label: a gloss of what the record/item is. The label stays
+   gothic/bold; the caption sits after a space, in the body serif (Latin Modern
+   Roman / Shippori Mincho) and wrapped in parentheses. */
+.label .caption,
+.record-label .caption {
   margin-left: 0.5em;
   font-family: 'Latin Modern Roman', 'Shippori Mincho', serif;
   font-size: 1rem;
@@ -55,8 +74,10 @@ html, body {
   letter-spacing: normal;
   color: #4d4d4d;
 }
-.label .caption::before { content: "("; }
-.label .caption::after { content: ")"; }
+.label .caption::before,
+.record-label .caption::before { content: "("; }
+.label .caption::after,
+.record-label .caption::after { content: ")"; }
 
 /* ---- Proposition / proof blocks ---- */
 .block {
@@ -90,9 +111,77 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.body ul {
+.body ul,
+.body ol {
   line-height: 2.2;
-  padding-left: 1.4em;
+  padding-left: 1.6em;
+  margin: 0 0 1.6em;
+}
+.body li { margin: 0 0 0.3em; }
+
+/* Sub-headings inside a block (### / ####). Gothic like the labels, but part
+   of the flowing body — smaller and less tracked than the block label. */
+.body h3,
+.body h4 {
+  font-family: 'Latin Modern Sans', 'Noto Sans JP', sans-serif;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  margin: 1.8em 0 0.8em;
+}
+.body h3 { font-size: 1.1rem; }
+.body h4 { font-size: 1rem; }
+
+.body blockquote {
+  margin: 0 0 1.6em;
+  padding: 0.2em 0 0.2em 1.1em;
+  border-left: 2px solid rgba(64, 64, 64, 0.2);
+  color: #5c5c5c;
+}
+.body blockquote p { margin-bottom: 0.8em; }
+.body blockquote p:last-child { margin-bottom: 0; }
+
+/* GFM tables — light monochrome, horizontally scrollable if they overflow. */
+.body table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0 0 1.8em;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.body th,
+.body td {
+  border: 1px solid rgba(64, 64, 64, 0.18);
+  padding: 0.5em 0.9em;
+  text-align: left;
+  vertical-align: top;
+}
+.body th {
+  font-family: 'Latin Modern Sans', 'Noto Sans JP', sans-serif;
+  font-weight: 700;
+  color: var(--ink);
+  background: rgba(64, 64, 64, 0.03);
+}
+
+/* Fenced code / inline code — a quiet monospace block that can scroll wide. */
+.body pre {
+  overflow-x: auto;
+  margin: 0 0 1.6em;
+  padding: 1em 1.2em;
+  background: rgba(64, 64, 64, 0.04);
+  border-radius: 4px;
+  line-height: 1.6;
+}
+.body pre code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  color: #3a3a3a;
+}
+.body code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.9em;
 }
 
 /* 幅の広いディスプレイ数式は、はみ出さずに横スクロールさせる */
