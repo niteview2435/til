@@ -1,5 +1,5 @@
-/* Scroll-triggered reveal. Each .reveal group (proposition, proof) fades in
-   as a whole when it enters the viewport. */
+/* Scroll-triggered reveal. Each .reveal group (a record label or a block)
+   fades in as a whole when it enters the viewport. */
 (function () {
   // Auto-typeset is disabled in the page config; trigger it once up front.
   if (window.MathJax && window.MathJax.startup) {

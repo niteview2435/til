@@ -1,4 +1,4 @@
-/* Month calendar built from index.json. Days with a proof are highlighted and
+/* Month calendar built from index.json. Days with a record are highlighted and
    link to that day; the arrows move between months. On a day page the calendar
    opens on that day's month, otherwise on the current month. */
 (function () {
@@ -53,7 +53,7 @@
         for (var d = 1; d <= days; d++) {
           var key = year + "-" + pad(month + 1) + "-" + pad(d);
           var cls = "cal-cell";
-          if (have[key]) cls += " has-proof";
+          if (have[key]) cls += " has-record";
           if (key === pageDate) cls += " current";
           if (have[key] && key !== pageDate) {
             html += '<a class="' + cls + '" href="./' + key + '.html">' + d + "</a>";

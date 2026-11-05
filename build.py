@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Generate the daily-proof static site into docs/.
+"""Generate the TIL static site into docs/.
 
-Sources live in proofs/YYYY-MM-DD.md. Each becomes docs/YYYY-MM-DD.html where
-the proposition and the proof each fade in as one group on scroll. Math is
-written as $...$ / $$...$$ and rendered client-side by MathJax, so this script
-needs only the standard library.
+Sources live in proofs/YYYY-MM-DD.md (the directory name predates the TIL
+pivot and is kept for continuity). Each becomes docs/YYYY-MM-DD.html where the
+day's records and their blocks fade in as groups on scroll. Math is written as
+$...$ / $$...$$ and rendered client-side by MathJax, so this script needs only
+the standard library.
 """
 
 import html
@@ -385,7 +386,7 @@ DAY_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{date_jp} — daily-proof</title>
+  <title>{date_jp} — TIL</title>
   <link rel="stylesheet" href="{lm_roman}" />
   <link rel="stylesheet" href="{lm_sans}" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Shippori+Mincho&display=swap" rel="stylesheet" />
@@ -422,7 +423,7 @@ THEME_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{theme} — daily-proof</title>
+  <title>{theme} — TIL</title>
   <link rel="stylesheet" href="{lm_roman}" />
   <link rel="stylesheet" href="{lm_sans}" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Shippori+Mincho&display=swap" rel="stylesheet" />
@@ -458,7 +459,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>daily-proof</title>
+  <title>TIL</title>
   <style>
     html, body { height: 100%; margin: 0; }
     body { display: grid; place-items: center; background: #fff; color: #9a9a9a;

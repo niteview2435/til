@@ -1,6 +1,6 @@
 .PHONY: build serve preview new clean
 
-# Newest proof's output page, e.g. 2026-10-13.html (empty if no proofs yet).
+# Newest day's output page, e.g. 2026-10-13.html (empty if no sources yet).
 LATEST := $(notdir $(lastword $(sort $(wildcard proofs/*.md))))
 LATEST_HTML := $(LATEST:.md=.html)
 
@@ -13,14 +13,14 @@ build:
 serve: build
 	python3 -m http.server 8000 --directory docs
 
-# Watch sources, auto-rebuild on save, auto-open + live-reload the newest proof.
+# Watch sources, auto-rebuild on save, auto-open + live-reload the newest day.
 # The live-reload script is injected only in this --watch mode, never into the
 # committed/CI docs/ output. Ctrl-C to stop.
 preview:
 	@( sleep 1; open "http://localhost:8000/$(LATEST_HTML)" ) &
 	python3 build.py --watch
 
-# Scaffold today's proof file in proofs/ (no-op if it already exists).
+# Scaffold today's record file in proofs/ (no-op if it already exists).
 new:
 	python3 build.py --new
 

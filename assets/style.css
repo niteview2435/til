@@ -79,7 +79,7 @@ html, body {
 .label .caption::after,
 .record-label .caption::after { content: ")"; }
 
-/* ---- Proposition / proof blocks ---- */
+/* ---- Record blocks ---- */
 .block {
   margin: 0 0 96px;
 }
@@ -225,7 +225,7 @@ mjx-container[display="true"] {
   }
 }
 
-/* 最後の証明と一緒に出る区切り線 */
+/* 最後のブロックと一緒に出る区切り線 */
 .divider {
   border: none;
   height: 1px;
@@ -290,11 +290,11 @@ mjx-container[display="true"] {
 
 .cal-cell.empty { visibility: hidden; }
 
-/* 証明がある日は文字をアクセントカラーに */
-.cal-cell.has-proof {
+/* 記録がある日は文字をアクセントカラーに */
+.cal-cell.has-record {
   color: var(--ink);
 }
-a.cal-cell.has-proof:hover { color: var(--ink-hover); }
+a.cal-cell.has-record:hover { color: var(--ink-hover); }
 
 /* 開いているページの日は、小さめのアクセントカラーの丸で包む */
 .cal-cell.current {
