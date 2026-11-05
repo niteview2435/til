@@ -5,15 +5,15 @@
 
 /* ---- Base typography (adapted from the Web5 ideal) ----
    Latin Modern (the typeface modern LaTeX ships) for Latin/math-adjacent text,
-   falling back to a mincho for Japanese glyphs — mirroring a Japanese LaTeX
-   document. */
+   falling back to a mincho (Noto Serif JP — sturdier on screen than the old
+   Shippori Mincho) for Japanese glyphs, mirroring a Japanese LaTeX document. */
 html, body {
   margin: 0;
   padding: 0;
   background-color: #ffffff;
   color: #404040;
-  font-family: 'Latin Modern Roman', 'Shippori Mincho', serif;
-  font-size: 17.12px;
+  font-family: 'Latin Modern Roman', 'Noto Serif JP', serif;
+  font-size: 18px;
   line-height: 1.6;
 }
 
@@ -64,11 +64,11 @@ html, body {
 
 /* Caption beside a label: a gloss of what the record/item is. The label stays
    gothic/bold; the caption sits after a space, in the body serif (Latin Modern
-   Roman / Shippori Mincho) and wrapped in parentheses. */
+   Roman / Noto Serif JP) and wrapped in parentheses. */
 .label .caption,
 .record-label .caption {
   margin-left: 0.5em;
-  font-family: 'Latin Modern Roman', 'Shippori Mincho', serif;
+  font-family: 'Latin Modern Roman', 'Noto Serif JP', serif;
   font-size: 1rem;
   font-weight: 400;
   letter-spacing: normal;
@@ -95,7 +95,7 @@ html, body {
 }
 
 /* 本文の既定色はラテン(Latin Modern Roman)用に少し薄く。
-   和文(.jp = Shippori Mincho)だけ従来の濃さに戻す。build.py が
+   和文(.jp = Noto Serif JP)だけ従来の濃さに戻す。build.py が
    かな・漢字・全角の連なりを <span class="jp"> で包んで出力する。 */
 .body { color: #4d4d4d; }
 .body .jp { color: #404040; }

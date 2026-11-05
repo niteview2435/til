@@ -389,7 +389,7 @@ DAY_TEMPLATE = """<!DOCTYPE html>
   <title>{date_jp} — TIL</title>
   <link rel="stylesheet" href="{lm_roman}" />
   <link rel="stylesheet" href="{lm_sans}" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Shippori+Mincho&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./assets/style.css" />
   <script>
     window.MathJax = {{
@@ -426,7 +426,7 @@ THEME_TEMPLATE = """<!DOCTYPE html>
   <title>{theme} — TIL</title>
   <link rel="stylesheet" href="{lm_roman}" />
   <link rel="stylesheet" href="{lm_sans}" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Shippori+Mincho&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./assets/style.css" />
   <script>
     window.MathJax = {{
