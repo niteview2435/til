@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A personal daily-notes / TIL site. Each day Claude curates the day's material (typically pasted AI explanations handed over by the author) into one or more **記録** (records) written in Markdown, compiled to a standalone static HTML page. Published at https://niteview2435.github.io/daily-proof/ (the `daily-proof` repo name / URL predates the TIL pivot and is kept for continuity). The daily `git` commits double as the continuity record (the GitHub contribution graph).
+A personal daily-notes / TIL site. Each day Claude curates the day's material (typically pasted AI explanations handed over by the author) into one or more **記録** (records) written in Markdown, compiled to a standalone static HTML page. Published at https://niteview2435.github.io/til/ (repo `niteview2435/til`, renamed from `daily-proof` in the TIL pivot — the old `/daily-proof/` URL is dead, GitHub Pages does not redirect it). The daily `git` commits double as the continuity record (the GitHub contribution graph). Note the local source dir (`proofs/`) and this repo's history still carry the old `daily-proof` name in places; that is cosmetic.
 
 **Division of labour:** the author supplies raw material (often AI output) and says roughly what it is; **Claude** shapes it into clean Markdown, decides the record/block structure, ordering, and placement, and files each record under a field in `theme_map.json`. `build.py` compiles.
 
@@ -56,4 +56,4 @@ Output in `docs/`:
 - `calendar.js` — builds the month grid from `index.json`: proof days get strong text and link to their page, the open day is a filled circle, arrows change month. Defaults to the page's own month.
 - `style.css` — monochrome design driven by `--ink` CSS vars; Latin Modern (Roman body, Sans headings) with Shippori Mincho / Noto Sans JP fallbacks for Japanese.
 
-All asset/data references use relative `./` paths so the site works under the `/daily-proof/` Pages subpath.
+All asset/data references use relative `./` paths so the site works under the `/til/` Pages subpath.
