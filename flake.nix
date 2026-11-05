@@ -1,5 +1,5 @@
 {
-  description = "daily-proof — one proposition and one proof a day";
+  description = "til — a personal daily-notes / TIL site";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -17,11 +17,11 @@
           packages = [ pkgs.python3 pkgs.gnumake ];
 
           shellHook = ''
-            echo "daily-proof — dev shell"
-            echo "  make new      scaffold today's proof in proofs/"
+            echo "til — dev shell"
+            echo "  make new      scaffold today's record in records/"
             echo "  make build    generate the static site into docs/"
             echo "  make serve    build, then preview at http://localhost:8000"
-            echo "  make preview  serve and auto-open the newest proof"
+            echo "  make clean    remove docs/"
           '';
         };
       });

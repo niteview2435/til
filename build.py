@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Generate the TIL static site into docs/.
 
-Sources live in proofs/YYYY-MM-DD.md (the directory name predates the TIL
-pivot and is kept for continuity). Each becomes docs/YYYY-MM-DD.html where the
+Sources live in records/YYYY-MM-DD.md. Each becomes docs/YYYY-MM-DD.html where the
 day's records and their blocks fade in as groups on scroll. Math is written as
 $...$ / $$...$$ and rendered client-side by MathJax, so this script needs only
 the standard library.
@@ -20,7 +19,7 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-SRC = ROOT / "proofs"
+SRC = ROOT / "records"
 OUT = ROOT / "docs"
 ASSETS = ROOT / "assets"
 THEME_MAP = ROOT / "theme_map.json"
@@ -581,7 +580,7 @@ def build(live=False):
 
 
 def watch(port=8000):
-    """Serve docs/ and rebuild on any change to proofs/, assets/ or build.py.
+    """Serve docs/ and rebuild on any change to records/, assets/ or build.py.
 
     A server-only `/__reload` endpoint returns a token that changes on each
     rebuild; the injected live-reload script polls it and reloads the open

@@ -1,7 +1,7 @@
 .PHONY: build serve preview new clean
 
 # Newest day's output page, e.g. 2026-10-13.html (empty if no sources yet).
-LATEST := $(notdir $(lastword $(sort $(wildcard proofs/*.md))))
+LATEST := $(notdir $(lastword $(sort $(wildcard records/*.md))))
 LATEST_HTML := $(LATEST:.md=.html)
 
 # Generate the static site into docs/ for local preview only.
@@ -20,7 +20,7 @@ preview:
 	@( sleep 1; open "http://localhost:8000/$(LATEST_HTML)" ) &
 	python3 build.py --watch
 
-# Scaffold today's record file in proofs/ (no-op if it already exists).
+# Scaffold today's record file in records/ (no-op if it already exists).
 new:
 	python3 build.py --new
 
