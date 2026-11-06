@@ -40,6 +40,30 @@ LM_SANS_CSS = f"{LM_BASE}/latinmodern-sans.css"
 
 MATH_RE = re.compile(r"(\$\$.+?\$\$|\$[^$\n]+?\$)", re.S)
 
+# A Pandoc-style raw-HTML fence: ```{=html} … ``` is passed through verbatim,
+# never escaped or markdown-parsed. Protected (like math) around the markdown
+# pass so hand-authored figures (inline SVG) survive intact. Kept deliberately
+# narrow — this is for the occasional diagram, not general HTML in prose.
+HTML_RE = re.compile(r"^```\{=html\}[ \t]*\n(.*?)\n```[ \t]*$", re.M | re.S)
+
+
+def protect_html(text):
+    store = []
+
+    def repl(m):
+        store.append(m.group(1))
+        return f"\x00H{len(store) - 1}\x00"
+
+    return HTML_RE.sub(repl, text), store
+
+
+def restore_html(text, store):
+    # Drop the <p> render_blocks wraps a lone placeholder line in, so the raw
+    # block lands as a sibling (a <figure>/<svg> inside <p> would be invalid).
+    for i, raw in enumerate(store):
+        text = text.replace(f"<p>\x00H{i}\x00</p>", raw).replace(f"\x00H{i}\x00", raw)
+    return text
+
 
 def protect_math(text):
     store = []
@@ -88,10 +112,12 @@ RULE_RE = re.compile(r"^\s*([-*_])\1{2,}\s*$")
 HEADING_RE = re.compile(r"^\s*(#{3,6})\s+(.*)$")
 FENCE_RE = re.compile(r"^\s*```(.*)$")
 FENCE_END_RE = re.compile(r"^\s*```\s*$")
-QUOTE_RE = re.compile(r"^\s*>\s?")
+# render_blocks runs on already html-escaped lines, so a blockquote's leading
+# `>` has become `&gt;` by the time we see it — match that, not the raw `>`.
+QUOTE_RE = re.compile(r"^\s*&gt;\s?")
 UL_RE = re.compile(r"^\s*[-*]\s+(.*)$")
 OL_RE = re.compile(r"^\s*\d+\.\s+(.*)$")
-BLOCK_START_RE = re.compile(r"^\s*(#{1,6}\s|>|```|\d+\.\s|[-*]\s)")
+BLOCK_START_RE = re.compile(r"^\s*(#{1,6}\s|&gt;|```|\d+\.\s|[-*]\s)")
 # A GFM table separator row: cells of dashes with optional alignment colons.
 TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
 
@@ -180,6 +206,7 @@ def render_blocks(lines):
         # Unordered / ordered lists, with lazy continuation of the last item.
         m = UL_RE.match(line) or OL_RE.match(line)
         if m:
+            flush_para()  # a list right after a paragraph line (no blank between)
             ordered = OL_RE.match(line) is not None
             item_re = OL_RE if ordered else UL_RE
             items = []
@@ -210,11 +237,13 @@ def render_blocks(lines):
 
 
 def md_to_html(text):
+    text, html_store = protect_html(text)
     text, store = protect_math(text)
     # Escape prose <, >, & now (math is already out as placeholders) so body
     # text and inline code can contain them safely; math is escaped on restore.
     text = html.escape(text, quote=False)
-    return restore_math(wrap_jp(render_blocks(text.split("\n"))), store)
+    out = restore_math(wrap_jp(render_blocks(text.split("\n"))), store)
+    return restore_html(out, html_store)
 
 
 def render_inline(text):
