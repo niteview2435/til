@@ -12,7 +12,8 @@ A personal daily-notes / TIL site. Each day Claude curates the day's material (t
 
 - `make new` — scaffold today's `records/YYYY-MM-DD.md` from a template (no-op if it exists)
 - `make build` — regenerate the whole site into `docs/` (`python3 build.py`)
-- `make serve` — build, then preview at http://localhost:8000
+- `make serve` — build, then preview at http://localhost:8000 (plain server; open any page yourself)
+- `make preview` — watch sources, auto-rebuild on save, and auto-open + live-reload the newest day (`python3 build.py --watch`; live-reload is injected only in this mode, never into committed/CI `docs/`)
 - `make clean` — remove `docs/`
 
 There are no tests and no linter. The dev shell (via `flake.nix` + direnv, or `nix develop`) only provides `python3` and `make`; `build.py` is pure standard library, so plain `python3 build.py` works without the shell.
@@ -53,7 +54,7 @@ Output in `docs/`:
 
 `assets/` (edit these directly; the build copies them):
 - `reveal.js` — IntersectionObserver that adds `.in-view` to `.reveal` elements (fade + blur + translateY, the "Web5" reveal). MathJax auto-typeset is disabled in the page config and triggered here after the DOM is ready.
-- `calendar.js` — builds the month grid from `index.json`: proof days get strong text and link to their page, the open day is a filled circle, arrows change month. Defaults to the page's own month.
-- `style.css` — monochrome design driven by `--ink` CSS vars; Latin Modern (Roman body, Sans headings) with Shippori Mincho / Noto Sans JP fallbacks for Japanese.
+- `calendar.js` — builds the month grid from `index.json`: days with a record get the `.has-record` class (strong text) and link to their page, the open day is a filled circle, arrows change month. Defaults to the page's own month.
+- `style.css` — monochrome design driven by `--ink` CSS vars; Latin Modern (Roman body, Sans headings) with Noto Serif JP (body) / Noto Sans JP (headings) fallbacks for Japanese.
 
 All asset/data references use relative `./` paths so the site works under the `/til/` Pages subpath.

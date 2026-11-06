@@ -21,6 +21,7 @@
             echo "  make new      scaffold today's record in records/"
             echo "  make build    generate the static site into docs/"
             echo "  make serve    build, then preview at http://localhost:8000"
+            echo "  make preview  watch + auto-rebuild + live-reload the newest day"
             echo "  make clean    remove docs/"
           '';
         };
